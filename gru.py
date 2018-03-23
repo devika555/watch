@@ -15,8 +15,8 @@ class GRUCell(torch.nn.Module):
         ### Insert your code below ###
         # create the weight matrices and biases. Use the `torch.nn.Parameter` class
         ##############################
-        
-
+        self.weight_input = Parameter(torch.zeros(input_size))
+        self.weight_hidden = Parameter(torch.zeros(hidden_size))
         ###############################
         ### Insert your code above ####
         ###############################

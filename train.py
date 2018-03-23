@@ -11,6 +11,9 @@ from dataset import TwitterFileArchiveDataset
 from gru import GRUCell
 from utils import init_weights, argmax, cuda, variable, get_sequence_from_indices
 from dataset import Vocab
+import random
+import matplotlib.pyplot as plt
+import plotGraph 
     
 class NeuralLanguageModel(torch.nn.Module):
     def __init__(self, embedding_size, hidden_size, vocab_size, init_token, eos_token, teacher_forcing=0.7):
@@ -52,6 +55,8 @@ class NeuralLanguageModel(torch.nn.Module):
         :return: A tensor of size (batch_size x max_len x vocab_size)
         expected: 7*20*27
         """
+        teaching = False
+        
         batch_size, max_len = inputs.shape
        
         hidden = self.cell_zero_state(batch_size)
@@ -64,17 +69,26 @@ class NeuralLanguageModel(torch.nn.Module):
             ##############################
             ### Insert your code below ###
             # `output` should be the output of the network at the current timestep
-            ##############################       
-            current_embed = embedding[:,i:i+1,:]
-            #print(current_embed.size())
-            #print(hidden.size())
+            ##############################   
+            if teaching == False:    
+                current_embed = embedding[:,i:i+1,:]
+            else:
+                current_embed = embedding(next_input)
+                current_embed = current_embed.view(1,1,300)
+            
             output,hn = self.gru(current_embed,hidden)
-            """print "output of gru"
-            print output.size()"""
+        
             output = self.projection(output)
-            """print "output of projection"
-            print output.size()"""
+         
             hidden = hn
+            
+            if random.random()<self.teacher_forcing:
+                next_input = F.softmax(output,dim=2)
+            
+            
+                next_input = torch.multinomial(next_input.squeeze(),1)
+                
+                
             #if 5<self.teacher_forcing():
             #output = output.squeeze()
 
@@ -109,26 +123,26 @@ class NeuralLanguageModel(torch.nn.Module):
             # `x_i` should be the output of the network at the current timestep
             ##############################
             if i==0:
+                
                 inputs = self.embedding(x_i)
-                inputs = inputs.view(1,1,200)
+                
+                
             elif i < start_tokens.size(0):
+                
                 inputs = self.embedding(start_tokens[i])
-               
-                inputs = inputs.view(1,1,200)
+                
+                
             else:
                 
                 inputs = self.embedding(x_i)
-                inputs =inputs.view(1,1,200)
+               
            
             
+            inputs = inputs.view(1,1,200)
                 
             output,hn = self.gru(inputs,hidden)
             hidden = hn
-            
            
-           
-            #softmax_out = F.softmax(output,2)
-            
             output = self.projection(output)
             output = F.softmax(output,dim=2)
             
@@ -137,8 +151,11 @@ class NeuralLanguageModel(torch.nn.Module):
             
             ###############################
             ### Insert your code above ####
-            ###############################
+            ##############################
             outputs.append(x_i)
+            
+            if x_i == self.eos_token:
+                break
     
             
 
@@ -146,8 +163,7 @@ class NeuralLanguageModel(torch.nn.Module):
         
         return outputs
     
-
-
+    
 def main():
     train_on = 'obama'  # 'trump' or 'obama'
     val_size = 0.2
@@ -155,7 +171,7 @@ def main():
     embedding_size = 200
     hidden_size = 300
     batch_size = 64
-    nb_epochs = 1
+    nb_epochs = 100
     max_grad_norm = 5
     teacher_forcing = 0.7
 
@@ -258,7 +274,11 @@ def main():
     losses = list(zip(*losses))
     for losses_vals in losses:
         print('\t'.join('{:.2f}'.format(lv) for lv in losses_vals))
-
-
+    PlotGraph = plotGraph.PlotGraph()
+    PlotGraph.plot(nb_epochs = nb_epochs,loss=losses_history["train"],type = "training")
+    PlotGraph.plot(nb_epochs = nb_epochs,loss=losses_history["val"],type = "validation")
+    PlotGraph.plot(nb_epochs = nb_epochs,loss=losses_history["val_ext"],type = "validation extension")
+ 
+    
 if __name__ == '__main__':
     main()

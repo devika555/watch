@@ -9,6 +9,7 @@ import torch.utils.data
 import re
 from nltk import word_tokenize, sent_tokenize
 from nltk.tokenize import TweetTokenizer
+import preprocessor as p
 
 import logging
 from collections import Counter
@@ -54,12 +55,12 @@ class Vocab(object):
             self.token_counts.pop(token)
 
         self.token2id = {t: i for i, t in enumerate(self.token_counts.keys())}
-        print self.token2id
+        
         self.id2token = {i: t for t, i in self.token2id.items()}
         self.nb_tokens = len(self.token2id)
-
+        
         print('Vocab pruned: {nb_tokens_before} -> {self.nb_tokens}')
-
+        
     def __getitem__(self, item):
         return self.token2id[item]
 
@@ -146,14 +147,15 @@ class TwitterFileArchiveDataset(LanguageModelDataset):
         fileContent = open('./data/trump_tweets.txt', "r")
         soup = BeautifulSoup(fileContent, 'html.parser')
         cleanContent= soup.get_text()
-        pattern = r"http\S+"
-        cleanContent = re.sub(pattern,"",cleanContent)
         cleanContent = cleanContent.split("\n")
-        
+          
+ 
 
         fileContent.close()
         for line in cleanContent:
-                
+            line = line.encode("ascii","ignore")
+            p.set_options(p.OPT.URL,p.OPT.EMOJI)
+            cleanContent = p.clean(line)     
             transformedLine = tknzr.tokenize(line)
             
             if(len(transformedLine)>0): 
